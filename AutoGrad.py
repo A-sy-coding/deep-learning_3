@@ -1,4 +1,5 @@
 import numpy as np
+import wakref  # 약한 참조를 만들어주는 라이브러리 -> 참조 카운트를 세지 않는다.
 
 class Variable:
     def __init__(self, data):
@@ -44,7 +45,8 @@ class Variable:
             f = funcs.pop()  # pop을 통해 함수 한개 가져오기
             # x, y = f.input, f.output     # 옆의 두개의 코드는 함수의 입출력이 하나라고 한정했을 때의 코드이다.
             # x.grad = f.backward(y.grad)
-            gys = [output.grad for output in f.outputs]   # 옆의 코드부터는 함수의 입출력이 여러개라고 가정했을 때의 코드이다.
+            gys = [output().grad for output in f.outputs]   # 옆의 코드부터는 함수의 입출력이 여러개라고 가정했을 때의 코드이다.
+                                                            # outputs에서 ()을 붙혀야지 약한 참조 객체에 접근할 수 있다.
             gxs = f.backward(*gys)  # 리스트 값들이 unpack되어 들어가게 한다.
             if not isinstance(gxs, tuple): # 튜플이 아니면 튜플로 변경
                 gxs = (gxs,)
@@ -89,7 +91,8 @@ class Function:
         for output in outputs:
             output.set_creator(self)
         self.inputs = inputs
-        self.outputs = outputs
+        # self.outputs = outputs  # Function 클래스와 Variable 클래스 간에 순환 참조가 일어나게 되므로 weakref을 통해 약한 참조로 변경한다.
+        self.outputs = [wakref.ref(output) for output in outputs]
 
         return outputs if len(outputs) > 1 else outputs[0]  # outputs의 길이가 1이면 첫번째 원소를 반환한다.
 

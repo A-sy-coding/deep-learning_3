@@ -1,5 +1,12 @@
 import numpy as np
-import wakref  # 약한 참조를 만들어주는 라이브러리 -> 참조 카운트를 세지 않는다.
+import weakref  # 약한 참조를 만들어주는 라이브러리 -> 참조 카운트를 세지 않는다.
+import contextlib
+
+# 해당 클래스는 역전파를 사용할지 사용하지 않을지를 결정할 수 있다.
+# 예를 들어, 신경망에는 학습모드와 추론모드가 있는데, 학습모드의 경우는 역전파가 필요하지만, 추론모드에서는 역전파가 필요없다.
+class Config:
+    enable_backprop = True
+
 
 class Variable:
     def __init__(self, data):
@@ -17,7 +24,7 @@ class Variable:
         self.creator = func
         self.generation = func.generation + 1  # 세대 기록
 
-    def backward(self):
+    def backward(self, retain_grad = False): # 메모리 사용량을 늘리기 위해 중간부분의 grad들은 삭제하도록 코드를 수정한다.
         
         # 초기 grad값을 1.0으로 설정
         if self.grad is None:
@@ -61,6 +68,9 @@ class Variable:
                 if x.creator is not None:
                     add_func(x.creator)
 
+            if not retain_grad:   # retain_grad가 fasle이면 중간 grad값들을 None으로 바꾼다.
+                for y in f.outputs:
+                    y().grad = None  # y는 약한참조 상태이기 때문에 y()로 참조하도록 한다.
 
 
     def cleargrad(self):  # grad를 초기화해주는 함수를 추가한다. -> 초기화하지 않으면 값이 중복되어져 연산이 수행되게 된다.
@@ -87,12 +97,13 @@ class Function:
         
         outputs = [Variable(as_array(y)) for y in ys]  # 리스트인 ys값들을 for문을 이용하여 각각 Variable 클래스로 저장한다.
 
-        self.generation = max([x.generation for x in inputs]) # 가장 최근의 세대 값을 저장한다.
-        for output in outputs:
-            output.set_creator(self)
-        self.inputs = inputs
-        # self.outputs = outputs  # Function 클래스와 Variable 클래스 간에 순환 참조가 일어나게 되므로 weakref을 통해 약한 참조로 변경한다.
-        self.outputs = [wakref.ref(output) for output in outputs]
+        if Config.enable_backprop: # 역전파를 사용하면 밑의 코드를 수행하고 역전파를 사용하지 않으면 순전파값만 구하게 된다.
+            self.generation = max([x.generation for x in inputs]) # 가장 최근의 세대 값을 저장한다.
+            for output in outputs:
+                output.set_creator(self)
+            self.inputs = inputs # 순전파 때의 결과값을 저장하는 로직
+            # self.outputs = outputs  # Function 클래스와 Variable 클래스 간에 순환 참조가 일어나게 되므로 weakref을 통해 약한 참조로 변경한다.
+            self.outputs = [weakref.ref(output) for output in outputs]
 
         return outputs if len(outputs) > 1 else outputs[0]  # outputs의 길이가 1이면 첫번째 원소를 반환한다.
 
@@ -158,13 +169,47 @@ def as_array(x):
         return np.array(x)
     return x
 
+# 역전파를 사용하고 사용하지 않는 것을 with문과 contextlib을 통해 구현
+@contextlib.contextmanager
+def using_config(name, value):
+    old_value = getattr(Config, name) # Config 클래스에 있는 name 가져오기
+    setattr(Config, name, value)
+    try:
+        yield
+    finally:
+        setattr(Config, name, old_value)  # with문을 빠져나올 때 원래 값으로 복원된다.
 
-x = Variable(np.array(2.0))
-a = square(x)
-y = add(square(a), square(a))
+# 예시
+with using_config('enable_backprop', False):  # 처음에 value가 False로 설정되었다가 마지막에 with문을 탈출하면서 다시 True로 변경된다.
+    x = Variable(np.array(2.0))
+    y= square(x)
+
+# 최종적으로 역전파를 사용하지 안할지를 결정하는 함수를 구현한다.
+def no_grad():
+    return using_config('enable_backprop', False)
+
+
+# contextlib 사용법
+import contextlib
+
+@contextlib.contextmanager  # decorate를 달면 문맥을 판단하는 함수가 만들어진다.
+def config_test():
+    print('start')
+    try:
+        yield
+    finally:
+        print('done')
+# with config_test():
+#     print('process...')
+
+x0 = Variable(np.array(1.0))
+x1 = Variable(np.array(1.0))
+t = add(x0,x1)
+y = add(x0, t)
 y.backward()
-print(y.data)
-print(x.grad)
+
+print(y.grad, t.grad)
+print(x0.grad, x1.grad)
 
 # A = Square()
 # B = Exp()

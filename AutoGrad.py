@@ -9,12 +9,13 @@ class Config:
 
 
 class Variable:
-    def __init__(self, data):
+    def __init__(self, data, name = None):  # 변수들을 구분하기 위해 이름을 붙여줄 수 있는 name 인자를 추가한다.
 
         # 데이터 타입이 다르면(ndarray가 아니면) 오류가 발생하게끔 구현
         if data is not None:
             if not isinstance(data, np.ndarray):
                 raise TypeError('{}은(는) 지원하지 않습니다.'.format(type(data)))
+        self.name = name
         self.data = data
         self.grad = None
         self.creator = None
@@ -75,6 +76,36 @@ class Variable:
 
     def cleargrad(self):  # grad를 초기화해주는 함수를 추가한다. -> 초기화하지 않으면 값이 중복되어져 연산이 수행되게 된다.
         self.grad = None
+
+    @property    # 해당 구문 때문에 Varuable 클래스를 마치 인스턴스 변수처럼 사용할 수 있게 된다.
+    def shape(self):  # np.array에서 shape를 하면 배열의 형상을 알려주듯이 Variable 클래스에서도 해당 함수를 사용할 수 있도록 해준다.
+        return self.data.shape
+
+    # 차원수를 알려주는 함수
+    @property
+    def ndim(self):
+        return self.data.ndim
+
+    # 사이즈를 알려주는 함수
+    @property
+    def size(self):
+        return self.data.size
+
+    # 타입을 할려주는 함수
+    @property
+    def dtype(self):
+        return self.data.dtype
+
+    # len 함수를 사용할 수 있도록 하기
+    def __len__(self):
+        return len(self.data)
+
+    # print가 출력해주는 문자열을 자신이 원하는대로 정의하려면 __repr__ 메서드를 재정의하면 된다.
+    def __repr__(self):
+        if self.data is None:
+            return 'variable(None)'
+        p = str(self.data).replace('\n', '\n' + ' '*9)  # 줄바꿈이 있으면 줄바꿈하고 추가로 공백을 9개를 넣어 가지런하게 만든다.
+        return 'variable(' + p + ')'
 
 class Function:
     # def __call__(self, input):
@@ -202,14 +233,8 @@ def config_test():
 # with config_test():
 #     print('process...')
 
-x0 = Variable(np.array(1.0))
-x1 = Variable(np.array(1.0))
-t = add(x0,x1)
-y = add(x0, t)
-y.backward()
-
-print(y.grad, t.grad)
-print(x0.grad, x1.grad)
+x = Variable(np.array([[1,2,3],[4,5,6]]))
+print(x)
 
 # A = Square()
 # B = Exp()

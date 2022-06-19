@@ -32,15 +32,7 @@ class Variable:
         # 초기 grad값을 1.0으로 설정
         if self.grad is None:
             self.grad = np.ones_like(self.data)
-        # 재귀문을 이용한 코드
-        # f = self.creator
-        # if f is not None:
-        #     x = f.input
-        #     x.grad = f.backward(self.grad)
-        #     x.backward()
 
-        # 반복문을 이용한 코드
-        # funcs = [self.creator] # 처리함수들을 리스트에 저장
         funcs = []
         seen_set = set()
 
@@ -53,8 +45,6 @@ class Variable:
 
         while funcs:
             f = funcs.pop()  # pop을 통해 함수 한개 가져오기
-            # x, y = f.input, f.output     # 옆의 두개의 코드는 함수의 입출력이 하나라고 한정했을 때의 코드이다.
-            # x.grad = f.backward(y.grad)
             gys = [output().grad for output in f.outputs]   # 옆의 코드부터는 함수의 입출력이 여러개라고 가정했을 때의 코드이다.
                                                             # outputs에서 ()을 붙혀야지 약한 참조 객체에 접근할 수 있다.
             gxs = f.backward(*gys)  # 리스트 값들이 unpack되어 들어가게 한다.
@@ -141,14 +131,6 @@ def as_variable(obj):
     return Variable(obj)
 
 class Function:
-    # def __call__(self, input):
-    #     x = input.data
-    #     y = self.forward(x)  # forward함수에서 구체적인 계산이 진행하도록 한다.
-    #     output = Variable(as_array(y))  # ndarray로 형변환 해준다.
-    #     output.set_creator(self)
-    #     self.input = input
-    #     self.output = output
-    #     return output
 
     def __call__(self, *inputs):  # 위의 __call__ 함수는 하나의 input값에 대해서 계산하였다.
                                 # 이 __call__함수는 여러개의 input값에 대해서 계산하도록 한다.
@@ -193,6 +175,7 @@ def setup_variable():
     Variable.__truediv__ = div
     Variable.__rtruediv__ = rdiv
     Variable.__pow__ = pow
+
 
 
 # Add 클래스의 forward 함수를 구현한다.
@@ -351,12 +334,6 @@ def no_grad():
     return using_config('enable_backprop', False)
 
 
-x = Variable(np.array(6.0))
-y1 = x**3
-y2 = x - 1.0
-print(y1)
-print(y2)
-
 # contextlib 사용법
 import contextlib
 
@@ -367,74 +344,7 @@ def config_test():
         yield
     finally:
         print('done')
-# with config_test():
-#     print('process...')
 
-# x = Variable(np.array([[1,2,3],[4,5,6]]))
-# print(x)
-
-# A = Square()
-# B = Exp()
-# C = Square()
-#
-# x = Variable(np.array(0.5))
-# a = A(x)
-# b = B(a)
-# y = C(b)
-# print(y.data)
-#
-# y.grad = np.array(1.0)
-# y.backward()
-# print(x.grad)
-#
-# ####### 함수로 만든 후 위의 코드 재작성
-# x = Variable(np.array(0.5))
-# a = square(x)
-# b = exp(a)
-# y = square(b)
-# print(y.data)
-#
-# y.grad = np.array(1.0)
-# y.backward()
-# print(x.grad)
-
-# assert y.creator == C  # y값은 C 함수에 의해 발생되었다.
-# assert y.creator.input == b # C 함수의 input으로는 b가 들어갔다.
-# assert y.creator.input.creator == B
-# assert y.creator.input.creator.input == a
-# assert y.creator.input.creator.input.creator == A
-# assert y.creator.input.creator.input.creator.input == x
-
-# 연결시킨 함수로 역전파 도전
-# y.grad = np.array(1.0)
-# C = y.creator
-# b = C.input
-# b.grad = C.backward(y.grad)
-# print(b.grad)
-#
-# B = b.creator
-# a = B.input
-# a.grad = B.backward(b.grad)
-# print(a.grad)
-#
-# A = a.creator
-# x = A.input
-# x.grad = A.backward(a.grad)
-# print(x.grad)
-
-# y.grad = np.array(1.0)
-# b.grad = C.backward(y.grad)
-# a.grad = B.backward(b.grad)
-# x.grad = A.backward(a.grad)
-# print(x.grad)
-
-# ndarray 외의 데이터 타입을 받지 못하게 설정 후 실행
-# x = Variable(np.array(1.0))
-# x = Variable(None)
-# x = Variable(1.0)
-
-
-####################
 # 테스트
 import unittest
 

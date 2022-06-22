@@ -13,3 +13,15 @@
 ```
 > python env/Scripts/activate
 ```
+
+</br>
+
+> 그래프를 시각화하기 위해서는 터미널에서 Graphviz 도구를 설치해야 한다.
+
+```
+> winget install graphviz  # window 환경에서 설치
+
+> sudo apt install graphviz  # ubuntu 환경에서 설치
+```
+
+

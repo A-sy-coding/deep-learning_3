@@ -128,6 +128,7 @@ class Variable:
         return rdiv(self, other)
     def __pow__(self, power):
         return pow(self, power)
+    
 
 # 들어오는 인자값이 Variable 인스턴스 또는 ndarray 인스턴스일 때 반환값을 Variable 인스턴스로 반환해주는 함수
 def as_variable(obj):

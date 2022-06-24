@@ -2,7 +2,8 @@
 
 # core_simple.py 파일과 core.py 파일 중 하나를 선택해 import 하도록 설정한다.
 
-is_simple_core = True  # core_simple.py 파일을 사용할 것인지에 관한 여부
+# is_simple_core = True  # core_simple.py 파일을 사용할 것인지에 관한 여부
+is_simple_core = False  # core.py파일을 사용
 
 if is_simple_core:
     from dezero.core_simple import Variable

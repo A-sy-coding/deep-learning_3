@@ -1,67 +1,23 @@
 digraph g {
-2538063733768 [label="y" , color=orange, style=filled]
-2538063733512 [label=Add, color=lightblue, style=filled, shape=box]
-2538063733320 -> 2538063733512
-2538063733640 -> 2538063733512
-2538063733512 -> 2538063733768
-2538063733320 [label="" , color=orange, style=filled]
-2538063733640 [label="" , color=orange, style=filled]
-2538063733384 [label=Mul, color=lightblue, style=filled, shape=box]
-2538063733448 -> 2538063733384
-2538063733576 -> 2538063733384
-2538063733384 -> 2538063733640
-2538063733448 [label="" , color=orange, style=filled]
-2538063733576 [label="" , color=orange, style=filled]
-2538063733256 [label=Pow, color=lightblue, style=filled, shape=box]
-2537787826312 -> 2538063733256
-2538063733256 -> 2538063733448
-2537787826312 [label="x" , color=orange, style=filled]
-2538063733064 [label=Add, color=lightblue, style=filled, shape=box]
-2538063732872 -> 2538063733064
-2538063733192 -> 2538063733064
-2538063733064 -> 2538063733320
-2538063732872 [label="" , color=orange, style=filled]
-2538063733192 [label="" , color=orange, style=filled]
-2538063732936 [label=Mul, color=lightblue, style=filled, shape=box]
-2538063733000 -> 2538063732936
-2538063733128 -> 2538063732936
-2538063732936 -> 2538063733192
-2538063733000 [label="" , color=orange, style=filled]
-2538063733128 [label="" , color=orange, style=filled]
-2538063732808 [label=Pow, color=lightblue, style=filled, shape=box]
-2537787826312 -> 2538063732808
-2538063732808 -> 2538063733000
-2537787826312 [label="x" , color=orange, style=filled]
-2538060896456 [label=Add, color=lightblue, style=filled, shape=box]
-2538063715976 -> 2538060896456
-2538063716296 -> 2538060896456
-2538060896456 -> 2538063732872
-2538063715976 [label="" , color=orange, style=filled]
-2538063716296 [label="" , color=orange, style=filled]
-2538063716040 [label=Mul, color=lightblue, style=filled, shape=box]
-2538063716104 -> 2538063716040
-2538063716232 -> 2538063716040
-2538063716040 -> 2538063716296
-2538063716104 [label="" , color=orange, style=filled]
-2538063716232 [label="" , color=orange, style=filled]
-2538063713480 [label=Pow, color=lightblue, style=filled, shape=box]
-2537787826312 -> 2538063713480
-2538063713480 -> 2538063716104
-2537787826312 [label="x" , color=orange, style=filled]
-2537787833864 [label=Add, color=lightblue, style=filled, shape=box]
-2538063366856 -> 2537787833864
-2538063715912 -> 2537787833864
-2537787833864 -> 2538063715976
-2538063366856 [label="" , color=orange, style=filled]
-2538063715912 [label="" , color=orange, style=filled]
-2537787829192 [label=Mul, color=lightblue, style=filled, shape=box]
-2538063662856 -> 2537787829192
-2538063366088 -> 2537787829192
-2537787829192 -> 2538063366856
-2538063662856 [label="" , color=orange, style=filled]
-2538063366088 [label="" , color=orange, style=filled]
-2537787826248 [label=Pow, color=lightblue, style=filled, shape=box]
-2537787826312 -> 2537787826248
-2537787826248 -> 2538063662856
-2537787826312 [label="x" , color=orange, style=filled]
+1871402618952 [label="gx1" , color=orange, style=filled]
+1871402598280 [label=Mul, color=lightblue, style=filled, shape=box]
+1871399766984 -> 1871402598280
+1871402598216 -> 1871402598280
+1871402598280 -> 1871402618952
+1871399766984 [label="" , color=orange, style=filled]
+1871402598216 [label="" , color=orange, style=filled]
+1871402597832 [label=Sub, color=lightblue, style=filled, shape=box]
+1871402598152 -> 1871402597832
+1871402598024 -> 1871402597832
+1871402597832 -> 1871402598216
+1871402598152 [label="" , color=orange, style=filled]
+1871402598024 [label="" , color=orange, style=filled]
+1871402597576 [label=Pow, color=lightblue, style=filled, shape=box]
+1871402540040 -> 1871402597576
+1871402597576 -> 1871402598024
+1871402540040 [label="y" , color=orange, style=filled]
+1871128156808 [label=Tanh, color=lightblue, style=filled, shape=box]
+1871128156872 -> 1871128156808
+1871128156808 -> 1871402540040
+1871128156872 [label="x" , color=orange, style=filled]
 }

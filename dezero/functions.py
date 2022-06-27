@@ -30,3 +30,18 @@ class Cos(Function):
 def cos(x):
     return Cos()(x) # cos 함수 수행
 
+
+# tanh 함수 구현
+# tanh 함수를 미분하면 1-tanh^2 이 된다.
+class Tanh(Function):
+    def forward(self, x):
+        y = np.tanh(x)
+        return y
+
+    def backward(self, gy):
+        y = self.outputs[0]()
+        gx = gy * (1-y**2)
+        return gx
+
+def tanh(x):
+    return Tanh()(x)

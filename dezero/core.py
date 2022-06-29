@@ -3,6 +3,7 @@
 import numpy as np
 import weakref  # 약한 참조를 만들어주는 라이브러리 -> 참조 카운트를 세지 않는다.
 import contextlib
+import dezero
 
 # 해당 클래스는 역전파를 사용할지 사용하지 않을지를 결정할 수 있다.
 # 예를 들어, 신경망에는 학습모드와 추론모드가 있는데, 학습모드의 경우는 역전파가 필요하지만, 추론모드에서는 역전파가 필요없다.
@@ -128,7 +129,21 @@ class Variable:
         return rdiv(self, other)
     def __pow__(self, power):
         return pow(self, power)
-    
+
+    # np.reshape와 같은 계산을 구현하기 위한 Variable reshape 함수를 구현한다.
+    def reshape(self, *shape):
+        if len(shape) == 1 and isinstance(shape[0], (tuple, list)): # 한자리만 들어오고, 그 instance가 tuple이거나 list이면 [0]으로 한자리 값을 꺼낸다.
+            shape = shape[0]
+        return dezero.functions.reshape(self, shape)  # functions.reshape함수에 이미 ndarray를 Variable로 변환하는 함수가 내장되어 있다.
+
+    # np.transpose와 같은 계산을 구현하기 위한 Varibale transpose 함수를 구현한다.
+    def transpose(self):
+        return dezero.functions.transpose(self)
+
+    # @property는 인스턴스 변수로사용할 수 있게 해주는 데코레이터이다.  --> transpose 대신 T만을 사용할 수 있다. ex) x.T == x.transpose()
+    @property
+    def T(self):
+        return dezero.functions.transpose(self)
 
 # 들어오는 인자값이 Variable 인스턴스 또는 ndarray 인스턴스일 때 반환값을 Variable 인스턴스로 반환해주는 함수
 def as_variable(obj):

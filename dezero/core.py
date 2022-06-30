@@ -145,6 +145,11 @@ class Variable:
     def T(self):
         return dezero.functions.transpose(self)
 
+    # sum 함수를 Variable 메서드로 사용할 수 있도록 구현
+    def sum(self, axis = None, keepdims=False):
+        return dezero.functions.sum(self, axis, keepdims)
+
+    
 # 들어오는 인자값이 Variable 인스턴스 또는 ndarray 인스턴스일 때 반환값을 Variable 인스턴스로 반환해주는 함수
 def as_variable(obj):
     if isinstance(obj, Variable):

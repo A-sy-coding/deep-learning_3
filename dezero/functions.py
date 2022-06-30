@@ -1,6 +1,7 @@
 # 새로운 함수 추가
 import numpy as np
 from dezero.core import Function
+from dezero import utils
 
 # sin 함수 구현
 class Sin(Function):
@@ -79,3 +80,41 @@ class Transpose(Function):
 
 def transpose(x):
     return Transpose()(x)
+
+# sum 함구 구현 -> 행렬을 sum하여 scalar값으로 구한다. + axis와 keepdims 기능도 추가
+class Sum(Function):
+    def __init__(self, axis, keepdims):
+        self.axis = axis
+        self.keepdims = keepdims
+
+    def forward(self, x):
+        self.x_shape = x.shape
+        y = x.sum(axis = self.axis, keepdims = self.keepdims)
+        return y
+
+    def backward(self, gy):
+        # gy = utils.reshape_sum_backward(gy, self.x_shape, self.axis, self.keepdims)  # utils.py파일의 reshpae_sum_backward 함수 사용
+        gx = broadcast_to(gy, self.x_shape)
+        return gx
+
+def sum(x, axis= None, keepdims=False):
+    return Sum(axis, keepdims)(x)
+
+# broadcast_to 함수 구현 --> broadcast 구현
+class BroadcastTo(Function):
+    def __init__(self, shape):
+        self.shape = shape
+
+    def forward(self, x):
+        self.x_shape = x.shape
+        y = np.broadcast_to(x, self.shape)
+        return y
+
+    def backward(self,gy):
+        gx = sum_to(gy, self.x_shape)
+        return gx
+
+def broadcast_to(x, shape):
+    if x.shape == shape:
+        return as_variable(x)
+    return BroadcastTo(shape)(x)

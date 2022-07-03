@@ -3,6 +3,7 @@ import numpy as np
 from dezero.core import Function
 from dezero import utils
 
+
 # sin 함수 구현
 class Sin(Function):
     def forward(self,x):
@@ -99,6 +100,25 @@ class Sum(Function):
 
 def sum(x, axis= None, keepdims=False):
     return Sum(axis, keepdims)(x)
+
+
+
+class SumTo(Function):
+    def __init__(self, shape):
+        self.shape= shape
+
+    def forward(self, x):
+        self.x_shape = x.shape
+        y = utils.sum_to(x, self.shape)
+        return y
+
+    def backward(self, gy):
+        gx = braodcast_to(gy, self.x_shape)
+
+def sum_to(x, shape):
+    if x.shape == shape:
+        return as_variable(x)
+    return SumTo(shape)(x)
 
 # broadcast_to 함수 구현 --> broadcast 구현
 class BroadcastTo(Function):

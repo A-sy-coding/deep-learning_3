@@ -65,3 +65,22 @@ def plot_dot_graph(output, verbose=True, to_file='graph.png'):
     extension = os.path.splitext(to_file)[1][1:]
     cmd = 'dot {} -T {} -o {}'.format(graph_path, extension, to_file)
     subprocess.run(cmd, shell=True)
+
+################################
+# utility functions for numpy
+################################
+
+# 행렬을 주어진 shape으로 값을 변환하여 출력한다. 즉, x의 원소의 합을 구해 shape형상으로 만들어주는 함수
+def sum_to(x, shape):
+
+    ndim = len(shape)  # 차원수
+    lead = x.ndim - ndim
+    lead_axis = tuple(range(lead))
+
+    axis = tuple([i + lead for i,sx in enumerate(shape) if sx==1])
+    print(lead_axis, axis)
+    y = x.sum(lead_axis + axis, keepdims=True)
+
+    if lead > 0:
+        y = y.squeeze(lead_axis)
+    return y

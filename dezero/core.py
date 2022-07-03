@@ -149,7 +149,7 @@ class Variable:
     def sum(self, axis = None, keepdims=False):
         return dezero.functions.sum(self, axis, keepdims)
 
-    
+
 # 들어오는 인자값이 Variable 인스턴스 또는 ndarray 인스턴스일 때 반환값을 Variable 인스턴스로 반환해주는 함수
 def as_variable(obj):
     if isinstance(obj, Variable):
@@ -206,14 +206,20 @@ def setup_variable():
 
 # Add 클래스의 forward 함수를 구현한다.
 # 이때, Add 클래스는 리스트를 받고 리스트로 반환해야 한다. --> Function 클래스를 수정함으로써 인자로 여러개를 받을 수 있게 됨
+import dezero.functions
 class Add(Function):
     def forward(self, x0, x1):  # forward 함수에 인자를 여러개 받아오기 위해서는 Function 클래스의 코드를 수정해야 한다.
+        self.x0_shape, self.x1_shape = x0.shape, x1.shape # 두 형상이 다를 때 브로드캐스트용 역전파를 계산
         y = x0 + x1
         return y
 
     def backward(self, gy):  # 덧셈의 역전파는 그대로 흘려보내는 것이다.
                             # 입력이 하나, 출력이 2개가 된다.
-        return gy, gy
+        gx0 , gx1 = gy, gy
+        if self.x0_shape != self.x1_shape:
+            gx0 = dezero.functions.sum_to(gx0, self.x0_shape)
+            gx1 = dezero.functions.sum_to(gx1, self.x1_shape)
+        return gx0, gx1
 
 # add 함수를 만듦으로써 Add 클래스 객체를 만들어주는 것을 생략시킬 수 있다.
 def add(x0, x1):
@@ -230,7 +236,12 @@ class Mul(Function):
     def backward(self, gy):
         # x0, x1 = self.inputs[0].data, self.inputs[1].data
         x0, x1 = self.inputs # 위의 코드는 Variable 인스턴스에서 ndarray 인스턴스인 data를 꺼냈지만, 이 코드는 Variable 인스턴스를 그대로 둔다.
-        return gy*x1, gy*x0
+        gx0 = gy * x1
+        gx1 = gy * x0
+        if x0.shape != x1.shape:
+            gx0 = dezero.functions.sum_to(gx0, x0.shape)
+            gx1 = dezero.functions.sum_to(gx1, x1.shape)
+        return gx0, gx1
 
 def mul(x0, x1):  # Mul 클래스를 함수로써 사용가능하게 함
     x1 = as_array(x1)
@@ -249,10 +260,16 @@ def neg(x):  # 부호를 변환해주는 class를 이용하여 부호를 변환�
 # 뺄셈을 해주는 클래스 정의
 class Sub(Function):
     def forward(self,x0,x1):
+        self.x0_shape, self.x1_shape = x0.shape, x1.shape
         y = x0 - x1
         return y
     def backward(self, gy):
-        return gy, -gy
+        gx0 = gy
+        gx1 = -gy
+        if self.x0_shape != self.x1_shape:
+            gx0 = dezero.functions.sum_to(gx0, self.x0_shape)
+            gx1 = dezero.functions.sum_to(gx1, self.x1_shape)
+        return gx0, gx1
 
 def sub(x0,x1):  # 뺄셈을 수행하는 함수
     x1 = as_array(x1)  # x1값들을 array 형태로 만들고 이후 Variable 클래스에서 Variable형태로 변환한다.
@@ -275,6 +292,9 @@ class Div(Function):
         x0, x1 = self.inputs
         gx0 = gy/x1
         gx1 = gy*(-x0/x1**2)
+        if x0.shape != x1.shape:
+            gx0 = dezero.functions.sum_to(gx0, x0.shape)
+            gx1 = dezero.functions.sum_to(gx1, x1.shape)
         return gx0, gx1
 
 

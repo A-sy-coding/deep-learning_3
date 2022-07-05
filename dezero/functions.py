@@ -93,8 +93,8 @@ class Sum(Function):
         y = x.sum(axis = self.axis, keepdims = self.keepdims)
         return y
 
-    def backward(self, gy):
         # gy = utils.reshape_sum_backward(gy, self.x_shape, self.axis, self.keepdims)  # utils.py파일의 reshpae_sum_backward 함수 사용
+    def backward(self, gy):
         gx = broadcast_to(gy, self.x_shape)
         return gx
 
@@ -152,3 +152,19 @@ class MatMul(Function):
         return gx, gW
 def matmul(x, W):
     return MatMul()(x,W)
+
+# 계산 그래프의 메모리 감소를 위한 mean_squared_error 클래스 정의
+class MeanSquaredError(Function):
+    def forward(self, x0, x1):
+        diff = x0 - x1
+        y = (diff ** 2).sum() / len(diff)
+        return y
+
+    def backward(self, gy):
+        x0, x1 = self.inputs
+        diff = x0 - x1
+        gx0 = gy * diff * (2. / len(diff))
+        gx1 = -gx0
+
+def mean_squared_error(x0, x1):
+    return MeanSquaredError()(x0, x1)

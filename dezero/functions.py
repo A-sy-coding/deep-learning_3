@@ -1,6 +1,7 @@
 # 새로운 함수 추가
 import numpy as np
-from dezero.core import Function
+import dezero
+from dezero.core import Function, as_variable, Variable, as_array
 from dezero import utils
 
 
@@ -48,6 +49,21 @@ class Tanh(Function):
 def tanh(x):
     return Tanh()(x)
 
+# exp 함수 구현
+class Exp(Function):
+    def forward(self, x):
+        y = np.exp(x)
+        return y
+
+    def backward(self, gy):
+        y = self.outputs[0]()
+        gx = gy * y
+        return gx
+
+def exp(x):
+    return Exp()(x)
+
+
 # x.data.shape와 x.grad.shape가 일치하도록 반환하는 reshape 함수 구현
 class Reshape(Function):
     def __init__(self, shape):
@@ -62,7 +78,7 @@ class Reshape(Function):
         return reshape(gy, self.x_shape)
 
 # dezero용 reshape 함수
-from dezero.core import as_variable
+# from dezero.core import as_variable
 
 def reshape(x, shape):
     if x.shape == shape:
@@ -95,6 +111,8 @@ class Sum(Function):
 
         # gy = utils.reshape_sum_backward(gy, self.x_shape, self.axis, self.keepdims)  # utils.py파일의 reshpae_sum_backward 함수 사용
     def backward(self, gy):
+        gy = utils.reshape_sum_backward(gy, self.x_shape, self.axis,
+                                        self.keepdims)
         gx = broadcast_to(gy, self.x_shape)
         return gx
 
@@ -168,3 +186,73 @@ class MeanSquaredError(Function):
 
 def mean_squared_error(x0, x1):
     return MeanSquaredError()(x0, x1)
+
+#################
+# 메모리 효율이 좋지 않은 linear함수와 sigmoid 함수
+################
+
+# 메모리의 효율성을 높이기 위한 간단한 선형 모형 구하기
+# 효율성을 높이기 위해 필요없는 인스턴스를 사용 후에 삭제하도록 한다.
+def linear_simple(x, W, b = None):
+    t = matmul(x, W)
+    if b is None:
+        return t
+
+    y = t + b
+    t.data = None  # t를 다 사용했으면 삭제한다.
+
+    return y
+
+# 시그모이드 활성화 함수를 구현한다. --> 하지만 밑의 시그모이드 함수는 메모리 효율이 좋지는 않다.
+def sigmoid_simple(x):
+    x = as_variable(x)
+    y = 1 / (1 + exp(-x))
+    return y
+
+##################
+# 메모리 효율을 향상시킨 linear함수와 sigmoid 함수
+##################
+
+
+# linear 클래스 -> 클래스로 정의하면 메모리의 효율성을 높일 수 있다.
+class Linear(Function):
+    def forward(self, x, W, b):
+        y = x.dot(W) 
+        if b is not None:
+            y += b
+
+        return y
+
+    def backward(self, gy):
+        x, W, b = self.inputs
+        gb = None if b.data is None else sum_to(gy, b.shape)
+        gx = matmul(gy, W.T)
+        gW = matmul(x.T, gy)
+
+        return gx, gW, gb
+
+def linear(x, W, b=None):
+    return Linear()(x, W, b)
+
+
+# Sigmoid 클래스 구현
+class Sigmoid(Function):
+    
+    def forward(self, x):
+        if isinstance(x, Variable):
+            x = x.data
+            y = 1 / (1 + np.exp(-x))
+            return y
+        else:
+            y = 1 / (1 + np.exp(-x))
+            return y
+        # y = 1 / (1 + np.exp(-x))
+        # return y
+
+    def backward(self, gy):
+        y = self.outputs[0]()
+        gx = gy * y * (1-y)
+        return gx
+    
+def sigmoid(x):
+    return Sigmoid()(x)

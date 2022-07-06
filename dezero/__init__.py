@@ -22,5 +22,4 @@ else:
     from dezero.core import as_variable
     from dezero.core import setup_variable
 
-
 setup_variable()   # 오버로드한 연산자들 사전 정의

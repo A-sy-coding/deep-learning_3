@@ -10,6 +10,30 @@ import dezero
 class Config:
     enable_backprop = True
 
+# 역전파를 사용하고 사용하지 않는 것을 with문과 contextlib을 통해 구현
+@contextlib.contextmanager
+def using_config(name, value):
+    old_value = getattr(Config, name) # Config 클래스에 있는 name 가져오기
+    setattr(Config, name, value)
+    try:
+        yield
+    finally:
+        setattr(Config, name, old_value)  # with문을 빠져나올 때 원래 값으로 복원된다.
+
+# 최종적으로 역전파를 사용하지 안할지를 결정하는 함수를 구현한다.
+def no_grad():
+    return using_config('enable_backprop', False)
+
+def test_mode():
+    return using_config('train', False)
+
+# 데이터 타입이 계산 후에도 똑같은 타입을 유지하도록 하는 함수
+# 즉, 입력이 scaler이면 ndarray 형태로 다시 변환해준다.
+def as_array(x):
+    if np.isscalar(x):
+        return np.array(x)
+    return x
+
 
 class Variable:
     __array_priority__ = 200 # ndarray 인스턴스에도 __add__ 메서드가 존재하는데, Variable 인스턴스의 __add__ 메서드가 먼저 호출하도록 하기 위해서는 우선순위를 설정해야 한다.
@@ -30,8 +54,11 @@ class Variable:
         self.creator = func
         self.generation = func.generation + 1  # 세대 기록
 
-    def backward(self, retain_grad = False, create_graph = False): # 메모리 사용량을 늘리기 위해 중간부분의 grad들은 삭제하도록 코드를 수정한다.
+    def cleargrad(self):  # grad를 초기화해주는 함수를 추가한다. -> 초기화하지 않으면 값이 중복되어져 연산이 수행되게 된다.
+        self.grad = None
 
+    def backward(self, retain_grad = False, create_graph = False): # 메모리 사용량을 늘리기 위해 중간부분의 grad들은 삭제하도록 코드를 수정한다.
+        
         # 초기 grad값을 1.0으로 설정
         if self.grad is None:
             # self.grad = np.ones_like(self.data)
@@ -68,12 +95,10 @@ class Variable:
                         add_func(x.creator)
 
             if not retain_grad:   # retain_grad가 fasle이면 중간 grad값들을 None으로 바꾼다.
+    
                 for y in f.outputs:
                     y().grad = None  # y는 약한참조 상태이기 때문에 y()로 참조하도록 한다.
 
-
-    def cleargrad(self):  # grad를 초기화해주는 함수를 추가한다. -> 초기화하지 않으면 값이 중복되어져 연산이 수행되게 된다.
-        self.grad = None
 
     @property    # 해당 구문 때문에 Varuable 클래스를 마치 인스턴스 변수처럼 사용할 수 있게 된다.
     def shape(self):  # np.array에서 shape를 하면 배열의 형상을 알려주듯이 Variable 클래스에서도 해당 함수를 사용할 수 있도록 해준다.
@@ -157,7 +182,7 @@ def as_variable(obj):
     return Variable(obj)
 
 class Function:
-
+    
     def __call__(self, *inputs):  # 위의 __call__ 함수는 하나의 input값에 대해서 계산하였다.
                                 # 이 __call__함수는 여러개의 input값에 대해서 계산하도록 한다.
                                 # inputs 앞에 *가 붙으면, 리스트를 사용하는 대신 임의 개수의 인수를 건네 함수를 호출할 수 있다. ex) f(1,2,3,...)
@@ -165,22 +190,25 @@ class Function:
 
         xs = [x.data for x in inputs]  # inputs는 Variable 클래스로 이뤄져 있는 값이다. (그 중 data값만 가져온다.)
         ys = self.forward(*xs) # xs 앞에 *를 붙히면, 리스트의 원소를 낱개로 풀어서 전달하는 것과 같다. ex) [a,b] -> a, b
-
+        
         if not isinstance(ys, tuple):  # 튜플이 아니면 튜플로 변경
             ys = (ys,)
 
         outputs = [Variable(as_array(y)) for y in ys]  # 리스트인 ys값들을 for문을 이용하여 각각 Variable 클래스로 저장한다.
-
+        
         if Config.enable_backprop: # 역전파를 사용하면 밑의 코드를 수행하고 역전파를 사용하지 않으면 순전파값만 구하게 된다.
             self.generation = max([x.generation for x in inputs]) # 가장 최근의 세대 값을 저장한다.
+            
             for output in outputs:
                 output.set_creator(self)
             self.inputs = inputs # 순전파 때의 결과값을 저장하는 로직
+            
             # self.outputs = outputs  # Function 클래스와 Variable 클래스 간에 순환 참조가 일어나게 되므로 weakref을 통해 약한 참조로 변경한다.
             self.outputs = [weakref.ref(output) for output in outputs]
 
         return outputs if len(outputs) > 1 else outputs[0]  # outputs의 길이가 1이면 첫번째 원소를 반환한다.
 
+    
     # 예외처리를 하여 상속받아 구현해야 한다는 사실을 알려준다.
     def forward(self, x):
         raise NotImplementedError()
@@ -326,110 +354,10 @@ def pow(x, c):  # 거듭제곱하는 함수 -> 인자로 밑과 지수를 받는
     return Pow(c)(x)
 
 
-# Function 클래스를 상속받아 입력값을 제곱하는 클래스 구현
-# Function 클래스의 forward 함수를 상속받아 오버라이딩한다.
-class Square(Function):
-    def forward(self,x):
-        y = x**2
-        return y
-    def backward(self,gy):
-        # x = self.inputs[0].data
-        x = self.inputs[0]
-        gx = 2 * x * gy
-        return gx
 
 
-# exp를 계산하는 클래스 구현
-class Exp(Function):
-    def forward(self, x):
-        return np.exp(x)
-    def backward(self,gy):
-        # x = self.input.data
-        x = self.inputs
-        gx = np.exp(x) * gy
-        return gx
-
-# 클래스들을 가지고 있는 함수 구현
-def square(x):
-    f = Square()
-    return f(x)
-
-def exp(x):
-    f = Exp()
-    return f(x)
-
-# 데이터 타입이 계산 후에도 똑같은 타입을 유지하도록 하는 함수
-# 즉, 입력이 scaler이면 ndarray 형태로 다시 변환해준다.
-def as_array(x):
-    if np.isscalar(x):
-        return np.array(x)
-    return x
-
-# 역전파를 사용하고 사용하지 않는 것을 with문과 contextlib을 통해 구현
-@contextlib.contextmanager
-def using_config(name, value):
-    old_value = getattr(Config, name) # Config 클래스에 있는 name 가져오기
-    setattr(Config, name, value)
-    try:
-        yield
-    finally:
-        setattr(Config, name, old_value)  # with문을 빠져나올 때 원래 값으로 복원된다.
-
-# 예시
-with using_config('enable_backprop', False):  # 처음에 value가 False로 설정되었다가 마지막에 with문을 탈출하면서 다시 True로 변경된다.
-    x = Variable(np.array(2.0))
-    y= square(x)
-
-# 최종적으로 역전파를 사용하지 안할지를 결정하는 함수를 구현한다.
-def no_grad():
-    return using_config('enable_backprop', False)
 
 
-# contextlib 사용법
-import contextlib
-
-@contextlib.contextmanager  # decorate를 달면 문맥을 판단하는 함수가 만들어진다.
-def config_test():
-    print('start')
-    try:
-        yield
-    finally:
-        print('done')
-
-# 테스트
-import unittest
-
-# expected 기울기를 자동으로 구해주는 함수 구현
-def numerical_diff(f, x, eps=1e-4):
-    x0 = Variable(x.data - eps)
-    x1 = Variable(x.data + eps)
-    y0 = f(x0)
-    y1 = f(x1)
-    return (y1.data-y0.data)/(2*eps)
-
-
-class SquareTest(unittest.TestCase):
-    def test_forward(self):
-        x = Variable(np.array(2.0))
-        y = square(x)
-        expected = np.array(4.0)
-        self.assertEqual(y.data, expected)
-
-    def test_backward(self):
-        x = Variable(np.array(3.0))
-        y = square(x)
-        y.backward()
-        expected = np.array(6.0)
-        self.assertEqual(x.grad, expected)
-
-    def test_gradient_check(self):
-        x = Variable(np.random.rand(1))
-        y = square(x)
-        y.backward()
-        num_grad = numerical_diff(square,x)
-        fig = np.allclose(x.grad, num_grad)
-        self.assertTrue(fig)
-# unittest.main()
 
 
 

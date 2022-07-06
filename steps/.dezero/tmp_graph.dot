@@ -1,23 +1,29 @@
 digraph g {
-1871402618952 [label="gx1" , color=orange, style=filled]
-1871402598280 [label=Mul, color=lightblue, style=filled, shape=box]
-1871399766984 -> 1871402598280
-1871402598216 -> 1871402598280
-1871402598280 -> 1871402618952
-1871399766984 [label="" , color=orange, style=filled]
-1871402598216 [label="" , color=orange, style=filled]
-1871402597832 [label=Sub, color=lightblue, style=filled, shape=box]
-1871402598152 -> 1871402597832
-1871402598024 -> 1871402597832
-1871402597832 -> 1871402598216
-1871402598152 [label="" , color=orange, style=filled]
-1871402598024 [label="" , color=orange, style=filled]
-1871402597576 [label=Pow, color=lightblue, style=filled, shape=box]
-1871402540040 -> 1871402597576
-1871402597576 -> 1871402598024
-1871402540040 [label="y" , color=orange, style=filled]
-1871128156808 [label=Tanh, color=lightblue, style=filled, shape=box]
-1871128156872 -> 1871128156808
-1871128156808 -> 1871402540040
-1871128156872 [label="x" , color=orange, style=filled]
+2777805027976 [label="" , color=orange, style=filled]
+2777805036552 [label=MeanSquaredError, color=lightblue, style=filled, shape=box]
+2777805027144 -> 2777805036552
+2777805034824 -> 2777805036552
+2777805036552 -> 2777805027976
+2777805027144 [label="" , color=orange, style=filled]
+2777805034824 [label="y_pred" , color=orange, style=filled]
+2777805022024 [label=Linear, color=lightblue, style=filled, shape=box]
+2777805023944 -> 2777805022024
+2777714251336 -> 2777805022024
+2777804941320 -> 2777805022024
+2777805022024 -> 2777805034824
+2777805023944 [label="" , color=orange, style=filled]
+2777714251336 [label="W2" , color=orange, style=filled]
+2777804941320 [label="b2" , color=orange, style=filled]
+2777775367816 [label=Sigmoid, color=lightblue, style=filled, shape=box]
+2777804967624 -> 2777775367816
+2777775367816 -> 2777805023944
+2777804967624 [label="" , color=orange, style=filled]
+2777769345224 [label=Linear, color=lightblue, style=filled, shape=box]
+2777775367432 -> 2777769345224
+2777714251272 -> 2777769345224
+2777770081352 -> 2777769345224
+2777769345224 -> 2777804967624
+2777775367432 [label="" , color=orange, style=filled]
+2777714251272 [label="W1" , color=orange, style=filled]
+2777770081352 [label="b1" , color=orange, style=filled]
 }

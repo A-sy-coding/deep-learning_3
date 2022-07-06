@@ -45,6 +45,7 @@ for i in range(iters):
 
     W.data -= lr * W.grad.data
     b.data -= lr * b.grad.data
+    print('=========={}========='.format(i+1))
     print(W, b, loss)  # 값을 계속 갱신
 
 ##########################

@@ -47,6 +47,8 @@ for i in range(iters):
     b.data -= lr * b.grad.data
     print('=========={}========='.format(i+1))
     print(W, b, loss)  # 값을 계속 갱신
+print(x.shape, W.shape, b.shape, y_pred.shape, y.shape, loss.shape)
+print(type(y_pred), type(y))
 
 ##########################
 # 하지만 위의 mean_squeared_error로 계산 그래프를 만들면 필요없이 메모리를 차지하는 노드가 존재할 수 있다.

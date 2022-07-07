@@ -109,10 +109,10 @@ class Sum(Function):
         y = x.sum(axis = self.axis, keepdims = self.keepdims)
         return y
 
-        # gy = utils.reshape_sum_backward(gy, self.x_shape, self.axis, self.keepdims)  # utils.py파일의 reshpae_sum_backward 함수 사용
+        # gy = utils.reshape_sum_backward(gy, self.x_shape, self.axis, self.keepdims)  # utils.py파일의 reshape_sum_backward 함수 사용
     def backward(self, gy):
-        gy = utils.reshape_sum_backward(gy, self.x_shape, self.axis,
-                                        self.keepdims)
+        # gy = utils.reshape_sum_backward(gy, self.x_shape, self.axis,
+        #                                 self.keepdims)
         gx = broadcast_to(gy, self.x_shape)
         return gx
 
@@ -175,6 +175,7 @@ def matmul(x, W):
 class MeanSquaredError(Function):
     def forward(self, x0, x1):
         diff = x0 - x1
+
         y = (diff ** 2).sum() / len(diff)
         return y
 
@@ -184,6 +185,7 @@ class MeanSquaredError(Function):
         gx0 = gy * diff * (2. / len(diff))
         gx1 = -gx0
 
+        return gx0, gx1
 def mean_squared_error(x0, x1):
     return MeanSquaredError()(x0, x1)
 

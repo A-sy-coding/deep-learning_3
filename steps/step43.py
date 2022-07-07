@@ -96,12 +96,6 @@ def predict(x):
     y = F.linear(y, W2, b2)
     return y
 
-y_pred = predict(x)
-loss = F.mean_squared_error(y, y_pred)
-
-from dezero.utils import plot_dot_graph
-loss.backward()
-
 
 # W1.name = 'W1'
 # W2.name = 'W2'
@@ -112,32 +106,29 @@ loss.backward()
 
 
 
-# lr = 0.2
-# iters = 10000
+lr = 0.2
+iters = 10000
 
-# for i in range(iters):
-#     y_pred = predict(x)
-#     loss = F.mean_squared_error(y, y_pred)
+for i in range(iters):
+    y_pred = predict(x)
+    loss = F.mean_squared_error(y, y_pred)
 
-#     W1.cleargrad()
-#     b1.cleargrad()
-#     W2.cleargrad()
-#     b2.cleargrad()
-#     loss.backward()
+    W1.cleargrad()
+    b1.cleargrad()
+    W2.cleargrad()
+    b2.cleargrad()
+    loss.backward()
 
-#     print(loss)
-#     print(W1.data)
-#     print(W1.grad)
-#     # print(b1.grad)
-#     W1.data -= lr * W1.grad.data
-#     b1.data -= lr * b1.grad.data
-#     W2.data -= lr * W2.grad.data
-#     b2.data -= lr * b2.grad.data
-#     if i % 1000 == 0:
-#         print(loss)
+    # print(b1.grad)
+    W1.data -= lr * W1.grad.data
+    b1.data -= lr * b1.grad.data
+    W2.data -= lr * W2.grad.data
+    b2.data -= lr * b2.grad.data
+    if i % 1000 == 0:
+        print(loss)
 
 
-# # Plot
+# Plot
 # plt.scatter(x, y, s=10)
 # plt.xlabel('x')
 # plt.ylabel('y')

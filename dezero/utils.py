@@ -78,7 +78,7 @@ def sum_to(x, shape):
     lead_axis = tuple(range(lead))
 
     axis = tuple([i + lead for i,sx in enumerate(shape) if sx==1])
-    print(lead_axis, axis)
+    # print(lead_axis, axis)
     y = x.sum(lead_axis + axis, keepdims=True)
 
     if lead > 0:

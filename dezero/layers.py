@@ -13,7 +13,7 @@ class Layer:
     # name이라는 인스턴스 변수에 값으로 value를 전달한다.
     def __setattr__(self, name ,value):
         # print(name, value)
-        if isinstance(value, Parameter):
+        if isinstance(value, (Parameter, Layer)): # Layer도 추가
             self._params.add(name)
         super().__setattr__(name, value)
 
@@ -32,7 +32,13 @@ class Layer:
 
     def params(self):
         for name in self._params:
-            yield self.__dict__[name]  # value 값
+            # yield self.__dict__[name]  # value 값
+
+            obj = self.__dict__[name]
+            if isinstance(obj, Layer):  # Layer에서 매개변수 꺼내기
+                yield from obj.params() # 재귀
+            else:
+                yield obj
             
     def cleargrads(self):
         for param in self.params():

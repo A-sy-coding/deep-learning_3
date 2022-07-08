@@ -1,29 +1,23 @@
 digraph g {
-2777805027976 [label="" , color=orange, style=filled]
-2777805036552 [label=MeanSquaredError, color=lightblue, style=filled, shape=box]
-2777805027144 -> 2777805036552
-2777805034824 -> 2777805036552
-2777805036552 -> 2777805027976
-2777805027144 [label="" , color=orange, style=filled]
-2777805034824 [label="y_pred" , color=orange, style=filled]
-2777805022024 [label=Linear, color=lightblue, style=filled, shape=box]
-2777805023944 -> 2777805022024
-2777714251336 -> 2777805022024
-2777804941320 -> 2777805022024
-2777805022024 -> 2777805034824
-2777805023944 [label="" , color=orange, style=filled]
-2777714251336 [label="W2" , color=orange, style=filled]
-2777804941320 [label="b2" , color=orange, style=filled]
-2777775367816 [label=Sigmoid, color=lightblue, style=filled, shape=box]
-2777804967624 -> 2777775367816
-2777775367816 -> 2777805023944
-2777804967624 [label="" , color=orange, style=filled]
-2777769345224 [label=Linear, color=lightblue, style=filled, shape=box]
-2777775367432 -> 2777769345224
-2777714251272 -> 2777769345224
-2777770081352 -> 2777769345224
-2777769345224 -> 2777804967624
-2777775367432 [label="" , color=orange, style=filled]
-2777714251272 [label="W1" , color=orange, style=filled]
-2777770081352 [label="b1" , color=orange, style=filled]
+2491492249032 [label="(5, 10) float64" , color=orange, style=filled]
+2491492248968 [label=Linear, color=lightblue, style=filled, shape=box]
+2491492248904 -> 2491492248968
+2491492148680 -> 2491492248968
+2491492248712 -> 2491492248968
+2491492248968 -> 2491492249032
+2491492248904 [label="(5, 100) float64" , color=orange, style=filled]
+2491492148680 [label="W: (100, 10) float32" , color=orange, style=filled]
+2491492248712 [label="b: (10,) float32" , color=orange, style=filled]
+2491492248648 [label=Sigmoid, color=lightblue, style=filled, shape=box]
+2491490725128 -> 2491492248648
+2491492248648 -> 2491492248904
+2491490725128 [label="(5, 100) float64" , color=orange, style=filled]
+2491492248776 [label=Linear, color=lightblue, style=filled, shape=box]
+2491453459464 -> 2491492248776
+2491453459848 -> 2491492248776
+2491492148104 -> 2491492248776
+2491492248776 -> 2491490725128
+2491453459464 [label="x: (5, 10) float64" , color=orange, style=filled]
+2491453459848 [label="W: (10, 100) float32" , color=orange, style=filled]
+2491492148104 [label="b: (100,) float32" , color=orange, style=filled]
 }

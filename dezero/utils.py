@@ -1,6 +1,7 @@
 # utils.py 파일에는 계산 그래프를 시각화 하는 함수를 구현하려고 한다.
 import os
 import subprocess
+import numpy as np
 
 def _dot_var(v, verbose=False):  # 함수 앞에 _가 들어가면 로컬에서만 사용한다는 의미이다.
     dot_var = '{} [label="{}" , color=orange, style=filled]\n'
@@ -113,3 +114,13 @@ def sum_to(x, shape):
 
         gy = gy.reshape(shape)  # reshape
         return gy
+
+# logsumexp --> log계산할 때 0이면 오류가 발생하므로 해당 오류를 방지하기 위해 x_min과 x_max를 설정하여 그 값들 범위 밖으로 벗어나지 않도록 한다.
+def logsumexp(x, axis=1):
+    m = x.max(axis=axis, keepdims=True)
+    y = x - m
+    np.exp(y, out=y)
+    s = y.sum(axis=axis, keepdims=True)
+    np.log(s, out=s)
+    m += s
+    return m

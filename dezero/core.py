@@ -196,6 +196,7 @@ class Function:
 
         outputs = [Variable(as_array(y)) for y in ys]  # 리스트인 ys값들을 for문을 이용하여 각각 Variable 클래스로 저장한다.
         
+
         if Config.enable_backprop: # 역전파를 사용하면 밑의 코드를 수행하고 역전파를 사용하지 않으면 순전파값만 구하게 된다.
             self.generation = max([x.generation for x in inputs]) # 가장 최근의 세대 값을 저장한다.
             

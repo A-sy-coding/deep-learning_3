@@ -3,7 +3,41 @@ import numpy as np
 import dezero
 from dezero.core import Function, as_variable, Variable, as_array
 from dezero import utils
+import dezero.functions as F
 
+########################
+# get_imte  --> 슬렉싱 해주는 클래스
+#######################
+class GetItem(Function):
+    def __init__(self, slices):
+        self.slices = slices
+    
+    def forward(self, x):
+        y = x[self.slices]
+        return y
+
+    def backward(self, gy):  # [[1,2,3],[4,5,6]] -> get_item(1) -> y :[4,5,6] -> gy:[1,1,1] -> gx : [[0,0,0],[1,1,1]]
+        x, = self.inputs
+        f = GetItemGrad(self.slices, x.shape)
+        return f(gy)
+def get_item(x, slices):
+    GetItem(slices)(x)
+
+class GetItemGrad(Function):
+    def __init__(self, slices, in_shape):
+        self.slices = slices
+        self.in_shape = in_shpae
+
+    def forward(self, gy):  # 순전파가 GetItem의 역전파에 대응되도록 한다.
+        gx = np.zeros(slef.in_shape)
+        np.add.at(gx, self.slices, gy) # gx에서 slices된 값들에 gy들을 더하도록 한다.
+        return gx
+    def backward(self, ggx):
+        return get_item(ggx, self.slices)
+
+def get_item(x, slices):
+    f = GetItem(slices)
+    return f(x)
 
 # sin 함수 구현
 class Sin(Function):
@@ -63,6 +97,17 @@ class Exp(Function):
 def exp(x):
     return Exp()(x)
 
+# log 함수 구현
+class Log(Function):
+    def forward(self, x):
+        y = np.log(x)
+        return y
+    def backward(self, gy):
+        x, = self.inputs
+        gx = gy / x
+        return gx
+def log(x):
+    return Log()(x)
 
 # x.data.shape와 x.grad.shape가 일치하도록 반환하는 reshape 함수 구현
 class Reshape(Function):
@@ -258,3 +303,103 @@ class Sigmoid(Function):
     
 def sigmoid(x):
     return Sigmoid()(x)
+
+
+# 배치 데이터도 처리할 수 있는 소프트맥스 함수
+def softmax_simple(x, axis=1):
+    x = as_variable(x)
+    y = exp(x)
+    sum_y = sum(y, axis=axis, keepdims=True)
+    return y / sum_y
+
+# 개선시킨 softmax 함수 구현
+class Softmax(Function):
+    def __init__(self, axis=1):
+        self.axis = axis
+
+    def forward(self, x):
+        y = x - x.max(axis=self.axis, keepdims=True)
+        y = np.exp(y)
+        y /= y.sum(axis=self.axis, keepdims=True)
+        return y
+    
+    def backward(self, gy):
+        y = self.outputs[0]()
+        gx = y * gy
+        sumdx = gx.sum(axis=self.axis, keepdims=True)
+        gx -= y * sumdx
+        return gx
+
+def softmax(x, axis=1):
+    return Softmax(axis)(x)
+
+
+
+######################
+# Softmax + cross_entropy
+######################
+
+Variable.__getitem__ = F.get_item
+def softmax_cross_entropy_simple(x, t):
+    x, t = as_variable(x), as_variable(t)
+    N = x.shape[0]
+    p = softmax(x)
+    p = clip(p, 1e-15, 1.0)  # To avoid log(0)
+    log_p = log(p)
+    tlog_p = log_p[np.arange(N), t.data]
+    print(log_p)
+    print(tlog_p)
+    y = -1 * sum(tlog_p) / N
+    return y
+
+class SoftmaxCrossEntropy(Function):
+    def forward(self, x, t):  # x는 output y는 정답
+        N = x.shape[0]
+        log_z = utils.logsumexp(x, axis=1)
+        
+        log_p = x - log_z
+        # log_p = as_variable(log_p)
+        # print(N, len(t.ravel()))
+        # print(log_p[0,t.ravel()[0]])
+        # print(log_p[1,t.ravel()[1]])
+        # print(log_p[2,t.ravel()[2]])
+        # print(log_p[3,t.ravel()[3]])
+        total_sum = 0
+        for n in range(N):
+            total_sum += log_p[n, t.ravel()[n]]
+        y = -total_sum / np.float32(N)
+
+        return y
+
+    def backward(self ,gy):
+        x, t = self.inputs
+        N, CLS_NUM = x.shape
+
+        gy *= 1/N
+        y = softmax(x)
+        t_onehot = np.eye(CLS_NUM, dtype=t.dtype)[t.data] # onehot
+        y = (y - t_onehot) * gy
+        return y
+
+def softmax_cross_entropy(x, t):
+    return SoftmaxCrossEntropy()(x, t)
+
+
+class Clip(Function):
+    def __init__(self, x_min, x_max):
+        self.x_min = x_min
+        self.x_max = x_max
+
+    def forward(self, x):
+        y = np.clip(x, self.x_min, self.x_max)
+        return y
+
+    def backward(self, gy):
+        x, = self.inputs
+        mask = (x.data >= self.x_min) * (x.data <= self.x_max)
+        gx = gy * mask
+        return gx
+
+
+def clip(x, x_min, x_max):
+    return Clip(x_min, x_max)(x)

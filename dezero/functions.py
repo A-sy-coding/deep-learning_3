@@ -403,3 +403,23 @@ class Clip(Function):
 
 def clip(x, x_min, x_max):
     return Clip(x_min, x_max)(x)
+
+
+##########################
+# model evaluate
+##########################
+
+def accuracy(y, t):
+    '''
+    정확도 구하기
+    Args:
+        y (ndarray) -> 각 클래스별 확률값으로 출력
+        t (ndarray) -> 각 클래스 값들로 출력
+    '''
+    y, t = as_variable(y), as_variable(t)
+
+    pred = y.data.argmax(axis=1).reshape(t.shape)
+    result = (pred == t.data)
+    acc = result.mean()
+
+    return Variable(as_array(acc))

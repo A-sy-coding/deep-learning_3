@@ -26,5 +26,6 @@ else:
     from dezero.layers import Layer
     from dezero.models import Model
     
+    from dezero.dataloaders import DataLoader
     # import dezero.optimizers
 setup_variable()   # 오버로드한 연산자들 사전 정의

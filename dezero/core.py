@@ -29,11 +29,17 @@ def test_mode():
 
 # 데이터 타입이 계산 후에도 똑같은 타입을 유지하도록 하는 함수
 # 즉, 입력이 scaler이면 ndarray 형태로 다시 변환해준다.
-def as_array(x):
+def as_array(x, array_module=np):
     if np.isscalar(x):
-        return np.array(x)
+        return array_module.array(x)
     return x
 
+# GPU 대응 추가
+try:
+    import cupy
+    array_types = (np.ndarray, cupy.ndarray)
+except ImportError:
+    array_types = (np.ndarray)
 
 class Variable:
     __array_priority__ = 200 # ndarray 인스턴스에도 __add__ 메서드가 존재하는데, Variable 인스턴스의 __add__ 메서드가 먼저 호출하도록 하기 위해서는 우선순위를 설정해야 한다.
@@ -42,7 +48,7 @@ class Variable:
 
         # 데이터 타입이 다르면(ndarray가 아니면) 오류가 발생하게끔 구현
         if data is not None:
-            if not isinstance(data, np.ndarray):
+            if not isinstance(data, array_types): # array_types을 넣어 cupy.ndarray와 np.ndarray를 사용할 수 있게 한다.
                 raise TypeError('{}은(는) 지원하지 않습니다.'.format(type(data)))
         self.name = name
         self.data = data
@@ -62,7 +68,8 @@ class Variable:
         # 초기 grad값을 1.0으로 설정
         if self.grad is None:
             # self.grad = np.ones_like(self.data)
-            self.grad = Variable(np.ones_like(self.data)) # 위의 코드는 grad를 ndarray로 만들었지만, 이 코드는 grad를 Variable 인스턴스로 만든다.
+            xp = dezero.cuda.get_array_module(self.data) # xp는 np가 될수도 있고, cp가 될 수도 있다.
+            self.grad = Variable(xp.ones_like(self.data)) # 위의 코드는 grad를 ndarray로 만들었지만, 이 코드는 grad를 Variable 인스턴스로 만든다.
 
         funcs = []
         seen_set = set()
@@ -99,6 +106,13 @@ class Variable:
                 for y in f.outputs:
                     y().grad = None  # y는 약한참조 상태이기 때문에 y()로 참조하도록 한다.
 
+    def to_cpu(self):  # 데이터를 cpu로 전송
+        if self.data is not None:
+            self.data = dezero.cuda.as_numpy(self.data)
+
+    def to_gpu(self): # 데이터를 gpu로 전송
+        if self.data is not None:
+            self.data = dezero.cuda.as_cupy(self.data)
 
     @property    # 해당 구문 때문에 Varuable 클래스를 마치 인스턴스 변수처럼 사용할 수 있게 된다.
     def shape(self):  # np.array에서 shape를 하면 배열의 형상을 알려주듯이 Variable 클래스에서도 해당 함수를 사용할 수 있도록 해준다.
@@ -252,7 +266,8 @@ class Add(Function):
 
 # add 함수를 만듦으로써 Add 클래스 객체를 만들어주는 것을 생략시킬 수 있다.
 def add(x0, x1):
-    x1 = as_array(x1) # array 형태가 아닌 x1값을 array로 변환해준다 -> 나중에 Function 클래스에서 Variable 객체로 다시 변환된다.
+    # x1 = as_array(x1) # array 형태가 아닌 x1값을 array로 변환해준다 -> 나중에 Function 클래스에서 Variable 객체로 다시 변환된다.
+    x1 = as_array(x1, dezero.cuda.get_array_module(x0.data))
     return Add()(x0, x1)
 
 
@@ -273,7 +288,8 @@ class Mul(Function):
         return gx0, gx1
 
 def mul(x0, x1):  # Mul 클래스를 함수로써 사용가능하게 함
-    x1 = as_array(x1)
+    # x1 = as_array(x1)
+    x1 = as_array(x1, dezero.cuda.get_array_module(x0.data))
     return Mul()(x0,x1)
 
 # 부호를 변환해주는 함수 구현
@@ -301,13 +317,15 @@ class Sub(Function):
         return gx0, gx1
 
 def sub(x0,x1):  # 뺄셈을 수행하는 함수
-    x1 = as_array(x1)  # x1값들을 array 형태로 만들고 이후 Variable 클래스에서 Variable형태로 변환한다.
+    # x1 = as_array(x1)  # x1값들을 array 형태로 만들고 이후 Variable 클래스에서 Variable형태로 변환한다.
+    x1 = as_array(x1, dezero.cuda.get_array_module(x0.data))
     return Sub()(x0,x1)
 
 # 뺄셈의 경우 2.0 - x와 같은 식이 존재하면 __rsub__ 메서드가 호출되게 되는데 2.0-x가 아니라 x-2.0으로 계산하게 되므로 rsub 함수를 재정의해야된다.
 # 덧셈은 왼쪽 오른쪽을 구분할 필요가 없지만, 뺄셈의 경우는 왼쪽과 오른쪽의 구분이 필요하다.
 def rsub(x0, x1):
-    x1 = as_array(x1)
+    # x1 = as_array(x1)
+    x1 = as_array(x1, dezero.cuda.get_array_module(x0.data))
     return Sub()(x1,x0)
 
 
@@ -328,11 +346,13 @@ class Div(Function):
 
 
 def div(x0, x1):  # 나눗셈을 계산하는 함수 구현 -> Div 클래스 사용
-    x1 = as_array(x1)
+    # x1 = as_array(x1)
+    x1 = as_array(x1, dezero.cuda.get_array_module(x0.data))
     return Div()(x0, x1)
 
 def rdiv(x0, x1):  # 나눗셈도 오른쪽과 왼쪽의 구분이 중요하다. --> rdiv 메소드를 재정의한다.
-    x1 = as_array(x1)
+    # x1 = as_array(x1)
+    x1 = as_array(x1, dezero.cuda.get_array_module(x0.data))
     return Div()(x1,x0)
 
 # 거듭제곱을 계산하는 클래스 구현

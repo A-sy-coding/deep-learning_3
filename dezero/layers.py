@@ -2,7 +2,7 @@ from dezero.core import Parameter
 import weakref
 import numpy as np
 import dezero.functions as F
-
+from dezero import cuda
 
 # Layer클래스는 변수를 반환하는 클래스이다. -> 매개변수를 유지한다.
 class Layer:
@@ -44,6 +44,13 @@ class Layer:
         for param in self.params():
             param.cleargrad()
 
+    def to_cpu(self): # param을 cpu로 전송
+        for param in self.params():
+            param.to_cpu()
+
+    def to_gpu(self): # param을 gpu로 전송
+        for param in self.params():
+            param.to_gpu()
 
 ################
 # 계층으로서의 Linear 클래스 정의 (함수의 Linear 클래스 아님)
@@ -67,15 +74,17 @@ class Linear(Layer):
         else:
             self.b = Parameter(np.zeros(out_size, dtype = dtype), name='b')
 
-    def _init_W(self):  # 가중치 초기화 함수
+    def _init_W(self, xp=np):  # 가중치 초기화 함수
         I,O = self.in_size, self.out_size
-        W_data = np.random.randn(I,O).astype(self.dtype) * np.sqrt(1 / I)  # 가중치 초기값은 무작위호 설정
+        W_data = xp.random.randn(I,O).astype(self.dtype) * np.sqrt(1 / I)  # 가중치 초기값은 무작위호 설정
         self.W.data = W_data  # self.W는 Parameter 인스턴스이기 때문에 값을 이용하려면 W.data로 출력해야 한다.
 
     def forward(self, x):
         if self.W.data is None:  # 가중치 in_size 자동 설정
             self.in_size = x.shape[1]
-            self._init_W()
+            xp = cuda.get_array_module(x)
+            self._init_W(xp)
+            # self._init_W()
         
         y = F.linear(x, self.W, self.b)
         return y

@@ -3,6 +3,7 @@
 import math
 import random
 import numpy as np
+from dezero import cuda
 
 class DataLoader:
     '''
@@ -12,12 +13,13 @@ class DataLoader:
         batch_size (int) -> 배치 크기
         shuffle (boolean) -> 섞는 옵션
     '''
-    def __init__(self, dataset, batch_size, shuffle=True):
+    def __init__(self, dataset, batch_size, shuffle=True, gpu=False):
         self.dataset = dataset
         self.batch_size = batch_size
         self.shuffle = shuffle
         self.data_size = len(dataset)
         self.max_iter = math.ceil(self.data_size / batch_size)
+        self.gpu = gpu # gpu설정(default는 false로 되어 있다.)
 
         self.reset()
 
@@ -39,11 +41,19 @@ class DataLoader:
         i, batch_size = self.iteration, self.batch_size
         batch_index = self.index[i*batch_size : (i+1)*batch_size]
         batch = [self.dataset[i] for i in batch_index]
-        x = np.array([example[0] for example in batch])
-        t = np.array([example[1] for example in batch])
+
+        xp = cuda.cupy if self.gpu else np # self.gpu가 true이면 cupy를 부르고, 아니면 numpy를 부른다.
+        x = xp.array([example[0] for example in batch])
+        t = xp.array([example[1] for example in batch])
 
         self.iteration += 1
         return x, t
 
     def next(self):
         return self.__next__()
+
+    def to_cpu(self):
+        self.gpu = False
+
+    def to_gpu(self):
+        self.gpu = True

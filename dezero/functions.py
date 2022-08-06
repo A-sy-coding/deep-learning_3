@@ -3,7 +3,8 @@ import numpy as np
 import dezero
 from dezero.core import Function, as_variable, Variable, as_array
 from dezero import utils
-import dezero.functions as F
+from dezero import cuda
+# import dezero.functions as F
 
 ########################
 # get_imte  --> 슬렉싱 해주는 클래스
@@ -29,9 +30,16 @@ class GetItemGrad(Function):
         self.in_shape = in_shpae
 
     def forward(self, gy):  # 순전파가 GetItem의 역전파에 대응되도록 한다.
-        gx = np.zeros(slef.in_shape)
-        np.add.at(gx, self.slices, gy) # gx에서 slices된 값들에 gy들을 더하도록 한다.
+        xp = dezero.cuda.get_array_module(gy)
+        gx = xp.zeros(slef.in_shape)
+
+        if xp is np:
+            np.add.at(gx, self.slices, gy) # gx에서 slices된 값들에 gy들을 더하도록 한다.
+        else:
+            xp.scatter_add(gx, self.slices, gy)
+
         return gx
+        
     def backward(self, ggx):
         return get_item(ggx, self.slices)
 
@@ -42,7 +50,8 @@ def get_item(x, slices):
 # sin 함수 구현
 class Sin(Function):
     def forward(self,x):
-        y = np.sin(x)
+        xp = cuda.get_array_module(x)
+        y = xp.sin(x)
         return y
 
     def backward(self, gy):
@@ -56,7 +65,8 @@ def sin(x):
 # cos 함수 구현
 class Cos(Function):
     def forward(self, x):
-        y = np.cos(x)
+        xp = cuda.get_array_module(x)
+        y = cp.cos(x)
         return y
 
     def backward(self, gy):
@@ -72,7 +82,8 @@ def cos(x):
 # tanh 함수를 미분하면 1-tanh^2 이 된다.
 class Tanh(Function):
     def forward(self, x):
-        y = np.tanh(x)
+        xp = cuda.get_array_module(x)
+        y = xp.tanh(x)
         return y
 
     def backward(self, gy):
@@ -86,7 +97,8 @@ def tanh(x):
 # exp 함수 구현
 class Exp(Function):
     def forward(self, x):
-        y = np.exp(x)
+        xp = cuda.get_array_module(x)
+        y = xp.exp(x)
         return y
 
     def backward(self, gy):
@@ -100,7 +112,8 @@ def exp(x):
 # log 함수 구현
 class Log(Function):
     def forward(self, x):
-        y = np.log(x)
+        xp = cuda.get_array_module(x)
+        y = xp.log(x)
         return y
     def backward(self, gy):
         x, = self.inputs
@@ -133,7 +146,8 @@ def reshape(x, shape):
 # numpy의 transpose 함수 구현
 class Transpose(Function):
     def forward(self,x):
-        y = np.transpose(x)  # 전치
+        xp = cuda.get_array_module(x)
+        y = xp.transpose(x)  # 전치
         return y
 
     def backward(self, gy):
@@ -190,7 +204,9 @@ class BroadcastTo(Function):
 
     def forward(self, x):
         self.x_shape = x.shape
-        y = np.broadcast_to(x, self.shape)
+        xp = dezero.cuda.get_array_module(x)
+        y = xp.broadcast_to(x, self.shape)
+        # y = np.broadcast_to(x, self.shape)
         return y
 
     def backward(self,gy):
@@ -287,14 +303,17 @@ class Sigmoid(Function):
     
     def forward(self, x):
         if isinstance(x, Variable):
+            xp = cuda.get_array_module(x)
             x = x.data
-            y = 1 / (1 + np.exp(-x))
+            y = 1 / (1 + xp.exp(-x))
             return y
         else:
-            y = 1 / (1 + np.exp(-x))
+            xp = cuda.get_array_module(x)
+            y = 1 / (1 + xp.exp(-x))
             return y
-        # y = 1 / (1 + np.exp(-x))
-        # return y
+
+        # xp = cuda.get_array_module(x)
+        # y = xp.tanh(x * 0.5) * 0.5 + 0.5  # Better implementation
 
     def backward(self, gy):
         y = self.outputs[0]()
@@ -318,8 +337,9 @@ class Softmax(Function):
         self.axis = axis
 
     def forward(self, x):
+        xp = cuda.get_array_module(x)
         y = x - x.max(axis=self.axis, keepdims=True)
-        y = np.exp(y)
+        y = xp.exp(y)
         y /= y.sum(axis=self.axis, keepdims=True)
         return y
     
@@ -336,7 +356,8 @@ def softmax(x, axis=1):
 # Relu 클래스 정의
 class ReLU(Function):
     def forward(self, x):
-        y = np.maximum(x, 0.0)
+        xp = cuda.get_array_module(x)
+        y = xp.maximum(x, 0.0)
         return y
     
     def backward(self, gy):
@@ -352,7 +373,7 @@ def relu(x):
 # Softmax + cross_entropy
 ######################
 
-Variable.__getitem__ = F.get_item
+# Variable.__getitem__ = F.get_item
 def softmax_cross_entropy_simple(x, t):
     x, t = as_variable(x), as_variable(t)
     N = x.shape[0]
@@ -390,7 +411,8 @@ class SoftmaxCrossEntropy(Function):
 
         gy *= 1/N
         y = softmax(x)
-        t_onehot = np.eye(CLS_NUM, dtype=t.dtype)[t.data] # onehot
+        xp = cuda.get_array_module(t.data)
+        t_onehot = xp.eye(CLS_NUM, dtype=t.dtype)[t.data] # onehot
         y = (y - t_onehot) * gy
         return y
 
@@ -404,7 +426,8 @@ class Clip(Function):
         self.x_max = x_max
 
     def forward(self, x):
-        y = np.clip(x, self.x_min, self.x_max)
+        xp = cuda.get_array_module(x)
+        y = xp.clip(x, self.x_min, self.x_max)
         return y
 
     def backward(self, gy):

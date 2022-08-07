@@ -39,7 +39,59 @@ class Layer:
                 yield from obj.params() # 재귀
             else:
                 yield obj
+    
+    # params들을 평탄화 시키는 함수
+    def _flatten_params(self, params_dict, parent_key=''):
+        '''
+        params_dict(dictionary 형태) : 평탄화된 파라미터들 저장
+        parent_key(str) : 종속된 파라미터 이름을 저장
+        '''
+        for name in self._params:
+            obj = self.__dict__[name]
+            key = parent_key + '/' + name if parent_key else name  # 객체 안에 파라미터가 존재하면 /로 종속됨을 표현하도록 한다.
             
+            # obj가 Layer이면 그 안에 존재하는 파라미터도 평탄화하도록 재귀적으로 함수를 호출한다.
+            if isinstance(obj, Layer):
+                obj._flatten_params(params_dict, key)
+            else:
+                params_dict[key] = obj
+
+    def save_weights(self, path):
+        '''
+        모델 가중치 저장
+        Args:
+            path(경로) -> 파일 저장 경로 지정
+        Return:
+            file
+        '''
+        self.to_cpu()
+
+        params_dict = {}
+        self._flatten_params(params_dict)
+        # print('params_dict : \n', params_dict)
+        array_dict = {key: param.data for key, param in params_dict.items() if param is not None}
+        # print('array_dict : \n', array_dict)
+        
+        try:
+            np.savez_compressed(path, **array_dict)
+        except (Exception, KeyboardInterrupt) as e: # interrupt가 발생하면 파일을 삭제하도록 한다.
+            if os.path.exists(path):
+                os.remove(path)
+            raise
+
+    def load_weights(self, path):
+        '''
+        모델 가중치 불러오기
+        Args:
+            path(경로) -> 모델 가중치 파일이 존재하는 경로
+        '''
+        npz = np.load(path)
+        params_dict = {}
+        self._flatten_params(params_dict)
+
+        for key, param in params_dict.items():
+            param.data = npz[key]
+
     def cleargrads(self):
         for param in self.params():
             param.cleargrad()

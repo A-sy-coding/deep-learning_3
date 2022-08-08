@@ -22,11 +22,14 @@ else:
     from dezero.core import as_variable
     from dezero.core import setup_variable
     from dezero.core import Parameter
+    from dezero.core import test_mode
+    from dezero.core import Config
 
     from dezero.layers import Layer
     from dezero.models import Model
     
     from dezero.dataloaders import DataLoader
     # import dezero.optimizers
+    
 
 setup_variable()   # 오버로드한 연산자들 사전 정의

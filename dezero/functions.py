@@ -459,3 +459,25 @@ def accuracy(y, t):
     acc = result.mean()
 
     return Variable(as_array(acc))
+
+#########################
+# 추가 기능
+#########################
+
+def dropout(x, dropout_ratio = 0.5):
+    '''
+    drop out function : 훈련시 무작위로 노드를 제거하고 학습 진행
+    Args:
+        x(np or Variable) : 데이터
+        dropout_ratio(float) : 0~1 -> 버리는 비율 설정
+    '''
+    x = as_variable(x)
+
+    if dezero.Config.train:
+        xp = cuda.get_array_module(x)
+        mask = xp.random.rand(*x.shape) > dropout_ratio
+        scale = xp.array(1.0 - dropout_ratio).astype(x.dtype)
+        y = x * mask / scale  # 역 드롭아웃 구현 -> test시 아무 처리도 하지 않아도 된다.
+        return y
+    else:
+        return x

@@ -9,6 +9,7 @@ import dezero
 # 예를 들어, 신경망에는 학습모드와 추론모드가 있는데, 학습모드의 경우는 역전파가 필요하지만, 추론모드에서는 역전파가 필요없다.
 class Config:
     enable_backprop = True
+    train = True  
 
 # 역전파를 사용하고 사용하지 않는 것을 with문과 contextlib을 통해 구현
 @contextlib.contextmanager
@@ -19,6 +20,14 @@ def using_config(name, value):
         yield
     finally:
         setattr(Config, name, old_value)  # with문을 빠져나올 때 원래 값으로 복원된다.
+
+def test_mode():
+    '''
+    train이 아닌 test 모드로 인식하게 해준다.
+    Return
+        with문 안에서 train=False로 변경
+    '''
+    return using_config('train', False)
 
 # 최종적으로 역전파를 사용하지 안할지를 결정하는 함수를 구현한다.
 def no_grad():

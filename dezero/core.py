@@ -185,8 +185,14 @@ class Variable:
         return dezero.functions.reshape(self, shape)  # functions.reshape함수에 이미 ndarray를 Variable로 변환하는 함수가 내장되어 있다.
 
     # np.transpose와 같은 계산을 구현하기 위한 Varibale transpose 함수를 구현한다.
-    def transpose(self):
-        return dezero.functions.transpose(self)
+    def transpose(self, *axes):
+        if len(axes) == 0:
+            axes = None
+        elif len(axes) == 1:
+            if isinstance(axes[0], (tuple,list)) or axes[0] is None:
+                axes = axes[0]
+        
+        return dezero.functions.transpose(self,axes)
 
     # @property는 인스턴스 변수로사용할 수 있게 해주는 데코레이터이다.  --> transpose 대신 T만을 사용할 수 있다. ex) x.T == x.transpose()
     @property

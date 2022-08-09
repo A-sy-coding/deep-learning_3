@@ -145,17 +145,28 @@ def reshape(x, shape):
 
 # numpy의 transpose 함수 구현
 class Transpose(Function):
+    def __init__(self, axes=None):
+        self.axes = axes
+
     def forward(self,x):
-        xp = cuda.get_array_module(x)
-        y = xp.transpose(x)  # 전치
+        # xp = cuda.get_array_module(x)
+        # y = xp.transpose(x)  # 전치
+        y = x.transpose(self.axes)
         return y
 
     def backward(self, gy):
-        gx = transpose(gy)
-        return gx
+        # gx = transpose(gy)
+        # return gx
+        if self.axes is None:
+            return transpose(gy)
+        
+        axes_len = len(self.axes)
+        inv_axes = tuple(np.argsort([ax % axes_len for ax in self.axes]))
+        return transpose(gy, inv_axes)
+        
 
-def transpose(x):
-    return Transpose()(x)
+def transpose(x, axes=None):
+    return Transpose(axes)(x)
 
 # sum 함구 구현 -> 행렬을 sum하여 scalar값으로 구한다. + axis와 keepdims 기능도 추가
 class Sum(Function):
@@ -481,3 +492,24 @@ def dropout(x, dropout_ratio = 0.5):
         return y
     else:
         return x
+
+
+
+# =============================================================================
+# conv2d / col2im / im2col / basic_math
+# =============================================================================
+# from dezero.functions_conv import conv2d
+# from dezero.functions_conv import deconv2d
+from dezero.functions_conv import conv2d_simple
+from dezero.functions_conv import im2col
+from dezero.functions_conv import col2im
+# from dezero.functions_conv import pooling_simple
+# from dezero.functions_conv import pooling
+# from dezero.functions_conv import average_pooling
+# from dezero.core import add
+# from dezero.core import sub
+# from dezero.core import rsub
+# from dezero.core import mul
+# from dezero.core import div
+# from dezero.core import neg
+# from dezero.core import pow

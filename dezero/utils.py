@@ -173,3 +173,19 @@ def get_file(url, file_name=None):
     print(" Done")
 
     return file_path
+
+# im2col & col2im에서 사용
+def pair(x):
+    if isinstance(x, int):
+        return (x, x)
+    elif isinstance(x, tuple):
+        assert len(x) == 2
+        return x
+    else:
+        raise ValueError
+
+def get_conv_outsize(input_size, kernel_size, stride, pad):
+    return (input_size + pad * 2 - kernel_size) // stride + 1
+
+def get_deconv_outsize(size, k, s, p):
+    return s * (size - 1) + k - 2*p

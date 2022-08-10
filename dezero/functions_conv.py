@@ -5,7 +5,7 @@ from dezero.utils import pair, get_conv_outsize, get_deconv_outsize
 from dezero.functions import linear, broadcast_to
 
 #####################
-# conv2_simple 구현
+# conv2_simple / Conv2d 구현
 #####################
 def conv2d_simple(x, W, b=None, stride=1, pad=0):
     '''
@@ -35,6 +35,145 @@ def conv2d_simple(x, W, b=None, stride=1, pad=0):
     y = t.reshape(N, OH, OW, OC).transpose(0,3,1,2)
     return y
 
+class Conv2d(Function):
+    def __init__(self, stride=1, pad=0):
+        super().__init__()
+        self.stride = pair(stride)
+        self.pad = pair(pad)
+
+    def forward(self, x, W, b):
+        xp = cuda.get_array_module(x)
+
+        KH, KW = W.shape[2:]
+        col = im2col_array(x, (KH, KW), self.stride, self.pad, to_matrix=False)
+
+        y = xp.tensordot(col, W, ((1,2,3), (1,2,3)))
+        if b is not None:
+            y += b
+        y = xp.rollaxis(y, 3, 1)
+
+        return y
+
+    def backward(self, gy):
+        x, W, b = self.inputs
+        gx = deconv2d(gy, W, b = None, stride=self.stride, pad=self.pad,
+                        outsize=(x.shape[2], x.shape[3]))
+        gW = Conv2dGradW(self)(x, gy)
+        gb = None
+        if b.data is None:
+            gb = gy.sum(axis=(0,2,3))
+
+        return gx, gW, gb
+
+def conv2d(x, W, b=None, stride=1, pad=0):
+    return Conv2d(stride, pad)(x, W, b)
+
+class Deconv2d(Function):
+    def __init__(self, stride=1, pad=0, outsize=None):
+        super().__init__()
+        self.stride = stride
+        self.pad = pad
+        self.outsize = outsize
+
+    def forward(self, x, W, b):
+        xp = cuda.get_array_module(x)
+
+        Weight = W
+        SH, SW = self.stide
+        PH, PW = self.pad
+        C, OC, KH, KW = Weight.shape
+        N, C, H, W = x.shape
+
+        if self.outsize is None:
+            out_h = get_deconv_outsize(H, ,KH, SH, PH)
+            out_w = get_deconv_outsize(W, KW, SW, PW)
+        else:
+            out_h, out_w = pair(self.outsize)
+        img_shape = (N, OC, out_h, out_w)
+
+        gcol = xp.tensordot(Weight, x, (0,1))
+        gcol = xp.rollaxis(gcol, 3)
+        y = col2im_array(gcol, img_shape, (KH, KW), self.stride, self.pad,
+                        to_matrix=False)
+        
+        if b is not None:
+            self.no_bias = True
+            y += b.reshape((1, b.size, 1, 1))
+        
+        return y
+
+    def backward(self, gy):
+        x, W, b = self.inputs
+
+        # ==== gx ====
+        gx = conv2d(gy, W, b=None, stride=self.stride, pad=self.pad)
+        # ==== gW ====
+        f = Conv2DGradW(self)
+        gW = f(gy, x)
+        # ==== gb ====
+        gb = None
+        if b.data is not None:
+            gb = gy.sum(axis=(0, 2, 3))
+        return gx, gW, gb
+
+def deconv2d(x, W, b=None, stride=1, pad=0, outsize=None):
+    return Deconv2d(stride, pad, outsize)(x, W, b)
+
+
+class Conv2DGradW(Function):
+    def __init__(self, conv2d):
+        W = conv2d.inputs[1]
+        kh, kw = W.shape[2:]
+        self.kernel_size = (kh, kw)
+        self.stride = conv2d.stride
+        self.pad = conv2d.pad
+
+    def forward(self, x, gy):
+        xp = cuda.get_array_module(x)
+
+        col = im2col_array(x, self.kernel_size, self.stride, self.pad,
+                           to_matrix=False)
+        gW = xp.tensordot(gy, col, ((0, 2, 3), (0, 4, 5)))
+        return gW
+
+    def backward(self, gys):
+        x, gy = self.inputs
+        gW, = self.outputs
+
+        xh, xw = x.shape[2:]
+        gx = deconv2d(gy, gW, stride=self.stride, pad=self.pad,
+                      outsize=(xh, xw))
+        ggy = conv2d(x, gW, stride=self.stride, pad=self.pad)
+        return gx, ggy
+                
+#####################
+# simple_pooling 구현
+#####################
+def pooling_sample(x, kernel_size, stride=1, pad=0):
+    '''
+    pooling 수행 -> 최대값만 추출
+    Args:
+        x(Variable) : conv연산을 끝낸 결과값
+        kernel_size(int or tuple) : max-pooling할 범위
+        stride(int or tuple) : 움직이는 범위
+        pad(int or tuple) : 패딩
+    Returns:
+        채널을 유지한 최대 풀링 결과 (stride만큼 감소)
+    '''
+    x = as_variable(x)
+
+    N, C, H, W = x.shape
+    KH, KW = par(kernel_size)
+    PH, PW = pair(pad)
+    SH, SW = pair(stride)
+    OH = get_conv_outsize(H, KH, SH, PH)
+    OW = get_conv_outsize(W, KW, SW, PW)
+
+    col = im2col(x, kernel_size, stride, pad, to_matrix=True)
+    col = col.reshape(-1, KH * KW)
+    y = col.max(axis=1)  # axis=1기준으로 2차원이면 가로값들중 최대값
+    y = y.reshape(N, OH, OW, C).transpose(0, 3, 1, 2)
+    return y
 
 #####################
 # im2col / col2im

@@ -3,6 +3,7 @@ import weakref
 import numpy as np
 import dezero.functions as F
 from dezero import cuda
+from dezero.utils import pair
 
 # Layer클래스는 변수를 반환하는 클래스이다. -> 매개변수를 유지한다.
 class Layer:
@@ -169,7 +170,7 @@ class Conv2d(Layer):
         C, OC = self.in_channels, self.out_channels
         KH, KW = pair(self.kernel_size)
         scale = np.sqrt(1 / (C * KH * KW))
-        W_data = xp.randomm.randn(OC, C, KH, KW).astype(self.dtype) * scale
+        W_data = xp.random.randn(OC, C, KH, KW).astype(self.dtype) * scale
         self.W.data = W_data
 
     def forward(self, x):

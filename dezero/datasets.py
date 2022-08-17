@@ -130,3 +130,17 @@ class MNIST(Dataset):
     @staticmethod
     def labels():
         return {0: '0', 1: '1', 2: '2', 3: '3', 4: '4', 5: '5', 6: '6', 7: '7', 8: '8', 9: '9'}
+
+#-- ImageNet 데이터셋 
+class ImageNet(Dataset):
+    def __init__(self):
+        NotImIemented
+    
+    @staticmethod
+    def labels():
+        url = 'https://gist.githubusercontent.com/yrevar/942d3a0ac09ec9e5eb3a/raw/238f720ff059c1f82f368259d1ca4ffa5dd8f9f5/imagenet1000_clsidx_to_labels.txt'
+        path = get_file(url)
+        with open(path, 'r') as f:
+            labels = eval(f.read())
+        
+        return labels

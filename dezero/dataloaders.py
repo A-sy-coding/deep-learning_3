@@ -57,3 +57,27 @@ class DataLoader:
 
     def to_gpu(self):
         self.gpu = True
+
+#-- 시계열용 데이터 로더
+class SeqDataLoader(DataLoader):
+    def __init__(self, dataset, batch_size, gpu=False):
+        super().__init__(dataset=dataset, batch_size=batch_size, shuffle=False, gpu=gpu)
+
+    def __next__(self):
+        '''
+        DataLoader 클래스의 __next__함수 오버라이딩
+        ''' 
+        if self.iteration >= self.max_iter:
+            self.reset()
+            raise StopIteration
+
+        jump = self.data_size // self.batch_size
+        batch_index = [(i*jump + self.iteration) % self.data_size for i in range(self.batch_size)]
+        batch = [self.dataset[i] for i in batch_index]
+
+        xp = cuda.cupy if self.gpu else np
+        x = np.array([example[0] for example in batch])  # 훈련 데이터
+        t = np.array([example[1] for example in batch])  # 정답 데이터
+
+        self.iteration += 1
+        return x, t
